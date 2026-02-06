@@ -1,6 +1,5 @@
-import Image from "next/image";
 import Catalog from "@/src/components/pages/Catalog";
 
-export default function Home() {
+export default function CatalogPage() {
   return <Catalog />;
 }
