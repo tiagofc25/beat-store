@@ -16,12 +16,14 @@ interface FormData {
     firstName: string;
     lastName: string;
     email: string;
+    instagram: string;
 }
 
 interface FormErrors {
     firstName?: string;
     lastName?: string;
     email?: string;
+    instagram?: string;
 }
 
 export default function Checkout() {
@@ -32,7 +34,8 @@ export default function Checkout() {
     const [formData, setFormData] = useState<FormData>({
         firstName: '',
         lastName: '',
-        email: ''
+        email: '',
+        instagram: ''
     });
     const [errors, setErrors] = useState<FormErrors>({});
 
@@ -230,6 +233,19 @@ export default function Checkout() {
                                     {errors.email && <p className="text-sm text-red-400">{errors.email}</p>}
                                 </div>
 
+                                <div className="space-y-2">
+                                    <Label htmlFor="instagram" className="text-zinc-300">
+                                        Instagram <span className="text-zinc-500">(optionnel)</span>
+                                    </Label>
+                                    <Input
+                                        id="instagram"
+                                        value={formData.instagram}
+                                        onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                                        className="bg-zinc-900 border-zinc-800 text-white focus:border-violet-500"
+                                        placeholder="@votre_pseudo"
+                                    />
+                                </div>
+
                                 <Button
                                     type="submit"
                                     disabled={isSubmitting}
@@ -281,7 +297,14 @@ export default function Checkout() {
                                         )}
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-white truncate">{beat.title}</p>
-                                            <p className="text-sm text-zinc-500">{beat.genre} • {beat.bpm} BPM</p>
+                                            <p className="text-sm text-zinc-500">
+                                                {(() => {
+                                                    const g = beat.genre;
+                                                    if (!g) return '';
+                                                    if (Array.isArray(g)) return g.join(', ');
+                                                    try { const parsed = JSON.parse(g); return Array.isArray(parsed) ? parsed.join(', ') : g; } catch { return g; }
+                                                })()} • {beat.bpm} BPM
+                                            </p>
                                         </div>
                                     </div>
                                 ))}

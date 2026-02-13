@@ -21,16 +21,22 @@ interface CartDrawerProps {
 export default function CartDrawer({ open, onOpenChange, items, onRemoveItem }: CartDrawerProps) {
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="bg-zinc-950 border-zinc-800 w-full sm:max-w-md">
+            <SheetContent className="bg-zinc-950 border-zinc-800 w-full sm:max-w-md" showCloseButton={false}>
                 <SheetHeader className="border-b border-zinc-800 pb-4">
                     <SheetTitle className="text-white flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
                             <ShoppingBag className="w-5 h-5 text-white" />
                         </div>
-                        Ma sélection
-                        <span className="ml-auto text-sm font-normal text-zinc-400">
-                            {items.length} beat{items.length > 1 ? 's' : ''}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-base font-semibold text-white">Ma sélection</p>
+                            <p className="text-xs font-normal text-zinc-500">{items.length} beat{items.length > 1 ? 's' : ''}</p>
+                        </div>
+                        <button
+                            onClick={() => onOpenChange(false)}
+                            className="w-8 h-8 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-colors flex-shrink-0"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </SheetTitle>
                 </SheetHeader>
 
@@ -46,7 +52,7 @@ export default function CartDrawer({ open, onOpenChange, items, onRemoveItem }: 
                     <>
                         <ScrollArea className="flex-1 h-[calc(100vh-220px)] py-4">
                             <div className="space-y-3">
-                        {items.map((beat) => (
+                                {items.map((beat) => (
                                     <div
                                         key={beat.id}
                                         className={cn(
@@ -69,7 +75,12 @@ export default function CartDrawer({ open, onOpenChange, items, onRemoveItem }: 
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-white truncate">{beat.title}</p>
                                             <p className="text-sm text-zinc-500">
-                                                {beat.genre} • {beat.bpm} BPM
+                                                {(() => {
+                                                    const g = beat.genre;
+                                                    if (!g) return '';
+                                                    if (Array.isArray(g)) return g.join(', ');
+                                                    try { const parsed = JSON.parse(g as unknown as string); return Array.isArray(parsed) ? parsed.join(', ') : g; } catch { return g; }
+                                                })()} • {beat.bpm} BPM
                                             </p>
                                         </div>
                                         <button

@@ -8,9 +8,10 @@ import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Upload, Music2, Image, Loader2, Check } from 'lucide-react';
+import { Upload, Music2, Image, Loader2, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Badge } from '@/src/components/ui/badge';
 
 const GENRES = ['Hip-Hop', 'Trap', 'R&B', 'Pop', 'Drill', 'Afrobeat', 'Lo-Fi', 'Boom Bap', 'Dancehall', 'Electronic'];
 const MOODS = ['Energique', 'Mélancolique', 'Agressif', 'Chill', 'Sombre', 'Joyeux', 'Épique', 'Romantique', 'Mystérieux'];
@@ -20,16 +21,16 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
     const [formData, setFormData] = useState<{
         title: string;
         bpm: string;
-        genre: string;
-        mood: string;
+        genres: string[];
+        moods: string[];
         coverFile: File | null;
         previewFile: File | null;
         fullFile: File | null;
     }>({
         title: '',
         bpm: '',
-        genre: '',
-        mood: '',
+        genres: [],
+        moods: [],
         coverFile: null,
         previewFile: null,
         fullFile: null
@@ -58,7 +59,7 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.title || !formData.bpm || !formData.genre || !formData.mood || !formData.previewFile) {
+        if (!formData.title || !formData.bpm || formData.genres.length === 0 || formData.moods.length === 0 || !formData.previewFile) {
             toast.error('Veuillez remplir tous les champs obligatoires');
             return;
         }
@@ -85,8 +86,8 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
             await beatService.create({
                 title: formData.title,
                 bpm: parseInt(formData.bpm),
-                genre: formData.genre,
-                mood: formData.mood,
+                genre: formData.genres,
+                mood: formData.moods,
                 cover_art_url: uploadedFiles.coverUrl,
                 preview_audio_url: uploadedFiles.previewUrl || '',
                 full_audio_url: uploadedFiles.fullUrl,
@@ -99,8 +100,8 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
             setFormData({
                 title: '',
                 bpm: '',
-                genre: '',
-                mood: '',
+                genres: [],
+                moods: [],
                 coverFile: null,
                 previewFile: null,
                 fullFile: null
@@ -153,13 +154,29 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
 
                     <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label className="text-zinc-300">Genre *</Label>
-                            <Select value={formData.genre} onValueChange={(v) => setFormData({ ...formData, genre: v })}>
+                            <Label className="text-zinc-300">Genre(s) *</Label>
+                            <div className="flex flex-wrap gap-2 p-3 bg-zinc-900 border border-zinc-800 rounded-md min-h-[42px]">
+                                {formData.genres.map((genre) => (
+                                    <Badge 
+                                        key={genre} 
+                                        className="bg-violet-500/20 text-violet-400 border-violet-500/30 hover:bg-violet-500/30 cursor-pointer"
+                                        onClick={() => setFormData({ ...formData, genres: formData.genres.filter(g => g !== genre) })}
+                                    >
+                                        {genre}
+                                        <X className="w-3 h-3 ml-1" />
+                                    </Badge>
+                                ))}
+                            </div>
+                            <Select onValueChange={(v) => {
+                                if (!formData.genres.includes(v)) {
+                                    setFormData({ ...formData, genres: [...formData.genres, v] });
+                                }
+                            }}>
                                 <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white">
-                                    <SelectValue placeholder="Sélectionner" />
+                                    <SelectValue placeholder="Ajouter un genre" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-zinc-900 border-zinc-800">
-                                    {GENRES.map((genre) => (
+                                    {GENRES.filter(g => !formData.genres.includes(g)).map((genre) => (
                                         <SelectItem key={genre} value={genre} className="text-white hover:bg-zinc-800">
                                             {genre}
                                         </SelectItem>
@@ -168,13 +185,29 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-zinc-300">Mood *</Label>
-                            <Select value={formData.mood} onValueChange={(v) => setFormData({ ...formData, mood: v })}>
+                            <Label className="text-zinc-300">Mood(s) *</Label>
+                            <div className="flex flex-wrap gap-2 p-3 bg-zinc-900 border border-zinc-800 rounded-md min-h-[42px]">
+                                {formData.moods.map((mood) => (
+                                    <Badge 
+                                        key={mood} 
+                                        className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/30 cursor-pointer"
+                                        onClick={() => setFormData({ ...formData, moods: formData.moods.filter(m => m !== mood) })}
+                                    >
+                                        {mood}
+                                        <X className="w-3 h-3 ml-1" />
+                                    </Badge>
+                                ))}
+                            </div>
+                            <Select onValueChange={(v) => {
+                                if (!formData.moods.includes(v)) {
+                                    setFormData({ ...formData, moods: [...formData.moods, v] });
+                                }
+                            }}>
                                 <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white">
-                                    <SelectValue placeholder="Sélectionner" />
+                                    <SelectValue placeholder="Ajouter un mood" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-zinc-900 border-zinc-800">
-                                    {MOODS.map((mood) => (
+                                    {MOODS.filter(m => !formData.moods.includes(m)).map((mood) => (
                                         <SelectItem key={mood} value={mood} className="text-white hover:bg-zinc-800">
                                             {mood}
                                         </SelectItem>

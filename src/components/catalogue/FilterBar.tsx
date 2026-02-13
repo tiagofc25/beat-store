@@ -7,7 +7,7 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
 
-const GENRES = ['Tous', 'Hip-Hop', 'Trap', 'R&B', 'Pop', 'Drill', 'Afrobeat', 'Lo-Fi', 'Boom Bap', 'Dancehall', 'Electronic'];
+const GENRES = ['Tous', 'Trap', 'R&B', 'Pop', 'Drill', 'Afrobeat', 'Amapiano', 'Jersey', 'Dancehall', 'Electronic', 'Afro-House', 'House', 'Hood Trap', 'Club', 'SPECIAL'];
 const MOODS = ['Tous', 'Energique', 'Mélancolique', 'Agressif', 'Chill', 'Sombre', 'Joyeux', 'Épique', 'Romantique', 'Mystérieux'];
 
 interface FilterState {

@@ -7,6 +7,21 @@ import { Button } from '@/src/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Beat } from '@/lib/supabase/database';
 
+// Helper function to parse array data that might be a JSON string
+const parseArray = (value: string | string[] | undefined): string[] => {
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [value];
+        } catch {
+            return [value];
+        }
+    }
+    return [];
+};
+
 type BeatWithId = Beat;
 
 interface BeatCardProps {
@@ -43,7 +58,7 @@ export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart
             audioRef.current?.pause();
             setIsPlaying(false);
         }
-    }, [isCurrentlyPlaying]);
+    }, [isCurrentlyPlaying, isPlaying]);
 
     const handleTimeUpdate = () => {
         if (audioRef.current) {
@@ -139,12 +154,16 @@ export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart
                 <h3 className="font-semibold text-white text-lg truncate">{beat.title}</h3>
 
                 <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="bg-zinc-800/50 text-zinc-300 border-zinc-700">
-                        {beat.genre}
-                    </Badge>
-                    <Badge variant="outline" className={cn("border", moodColors[beat.mood] || moodColors['Chill'])}>
-                        {beat.mood}
-                    </Badge>
+                    {parseArray(beat.genre).map((g) => (
+                        <Badge key={g} variant="outline" className="bg-zinc-800/50 text-zinc-300 border-zinc-700">
+                            {g}
+                        </Badge>
+                    ))}
+                    {parseArray(beat.mood).map((m) => (
+                        <Badge key={m} variant="outline" className={cn("border", moodColors[m] || moodColors['Chill'])}>
+                            {m}
+                        </Badge>
+                    ))}
                 </div>
 
                 {/* Action Button */}

@@ -26,8 +26,8 @@ export enum BeatMood {
 export interface Beat {
     title: string;
     bpm: number;
-    genre: BeatGenre;
-    mood: BeatMood;
+    genre: BeatGenre[];
+    mood: BeatMood[];
     cover_art_url?: string;
     preview_audio_url: string;
     full_audio_url?: string;

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Beat Store - Catalogue d'instrumentales",
+  title: "Spacechico & Winnit On The Track - Catalogue d'instrumentales",
   description:
     "Parcourez notre collection d'instrumentales et sélectionnez celles qui vous inspirent",
 };

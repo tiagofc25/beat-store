@@ -3,8 +3,8 @@ import { createClient } from '@/lib/supabase/client';
 export interface Beat {
   id: string;
   title: string;
-  genre: string;
-  mood: string;
+  genre: string[];
+  mood: string[];
   bpm: number;
   cover_art_url?: string;
   preview_audio_url: string;
@@ -18,6 +18,7 @@ export interface BeatRequest {
   first_name: string;
   last_name: string;
   email: string;
+  instagram?: string;
   beat_ids: string[];
   beat_titles: string[];
   status: 'pending' | 'approved' | 'rejected' | 'partial';
