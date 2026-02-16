@@ -48,7 +48,6 @@ export default function Catalog() {
       try {
         setCart(JSON.parse(saved));
       } catch {
-        // Invalid JSON in localStorage, reset cart
         localStorage.removeItem('beatCart');
       }
     }
@@ -83,19 +82,18 @@ export default function Catalog() {
 
   const hasActiveFilters = filters.genre !== 'Tous' || filters.mood !== 'Tous' || filters.search !== '';
 
-  // Save cart to localStorage
-  useEffect(() => {
-    localStorage.setItem('beatCart', JSON.stringify(cart));
-  }, [cart]);
-
   const addToCart = (beat: BeatWithId) => {
     if (!cart.find((item: BeatWithId) => item.id === beat.id)) {
-      setCart([...cart, beat]);
+      const newCart = [...cart, beat];
+      setCart(newCart);
+      localStorage.setItem('beatCart', JSON.stringify(newCart));
     }
   };
 
   const removeFromCart = (beatId: string) => {
-    setCart(cart.filter((item: BeatWithId) => item.id !== beatId));
+    const newCart = cart.filter((item: BeatWithId) => item.id !== beatId);
+    setCart(newCart);
+    localStorage.setItem('beatCart', JSON.stringify(newCart));
   };
 
   const handlePlay = (beatId: string) => {

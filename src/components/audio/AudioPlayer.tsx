@@ -16,6 +16,8 @@ export interface AudioPlayerRef {
     pause: () => void;
 }
 
+const PREVIEW_LIMIT_SECONDS = 90; // 1 minute 30
+
 const AudioPlayer = React.forwardRef<AudioPlayerRef, AudioPlayerProps>(({ src, title, compact = false, onPlay }, ref) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -28,8 +30,17 @@ const AudioPlayer = React.forwardRef<AudioPlayerRef, AudioPlayerProps>(({ src, t
         const audio = audioRef.current;
         if (!audio) return;
 
-        const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-        const handleLoadedMetadata = () => setDuration(audio.duration);
+        const handleTimeUpdate = () => {
+            if (audio.currentTime >= PREVIEW_LIMIT_SECONDS) {
+                audio.pause();
+                audio.currentTime = 0;
+                setIsPlaying(false);
+                setCurrentTime(0);
+                return;
+            }
+            setCurrentTime(audio.currentTime);
+        };
+        const handleLoadedMetadata = () => setDuration(Math.min(audio.duration, PREVIEW_LIMIT_SECONDS));
         const handleEnded = () => setIsPlaying(false);
 
         audio.addEventListener('timeupdate', handleTimeUpdate);

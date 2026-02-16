@@ -24,7 +24,8 @@
     "resend": "^6.9.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "ui": "^0.2.4"
+    "ui": "^0.2.4",
+    "wavesurfer.js": "^7.12.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
