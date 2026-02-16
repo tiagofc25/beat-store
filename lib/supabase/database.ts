@@ -28,16 +28,31 @@ export interface BeatRequest {
 
 // Beat operations
 export const beatService = {
+  async getById(id: string): Promise<Beat | null> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('beats')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Not found
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
   async list(orderBy?: string): Promise<Beat[]> {
     const supabase = createClient();
     let query = supabase.from('beats').select('*');
-    
+
     if (orderBy) {
       const isDesc = orderBy.startsWith('-');
       const column = isDesc ? orderBy.slice(1) : orderBy;
       query = query.order(column, { ascending: !isDesc });
     }
-    
+
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data || [];
@@ -46,19 +61,19 @@ export const beatService = {
   async filter(filters: Partial<Beat>, orderBy?: string): Promise<Beat[]> {
     const supabase = createClient();
     let query = supabase.from('beats').select('*');
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined) {
         query = query.eq(key, value);
       }
     });
-    
+
     if (orderBy) {
       const isDesc = orderBy.startsWith('-');
       const column = isDesc ? orderBy.slice(1) : orderBy;
       query = query.order(column, { ascending: !isDesc });
     }
-    
+
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data || [];
@@ -71,7 +86,7 @@ export const beatService = {
       .insert([{ ...beat, created_date: new Date().toISOString() }])
       .select()
       .single();
-    
+
     if (error) throw new Error(error.message);
     return data;
   },
@@ -84,7 +99,7 @@ export const beatService = {
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw new Error(error.message);
     return data;
   },
@@ -95,7 +110,7 @@ export const beatService = {
       .from('beats')
       .delete()
       .eq('id', id);
-    
+
     if (error) throw new Error(error.message);
   },
 };
@@ -105,13 +120,13 @@ export const beatRequestService = {
   async list(orderBy?: string): Promise<BeatRequest[]> {
     const supabase = createClient();
     let query = supabase.from('beat_requests').select('*');
-    
+
     if (orderBy) {
       const isDesc = orderBy.startsWith('-');
       const column = isDesc ? orderBy.slice(1) : orderBy;
       query = query.order(column, { ascending: !isDesc });
     }
-    
+
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data || [];
@@ -124,7 +139,7 @@ export const beatRequestService = {
       .insert([{ ...request, created_date: new Date().toISOString() }])
       .select()
       .single();
-    
+
     if (error) throw new Error(error.message);
     return data;
   },
@@ -137,7 +152,7 @@ export const beatRequestService = {
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw new Error(error.message);
     return data;
   },
