@@ -16,8 +16,23 @@ import { Badge } from '@/src/components/ui/badge';
 const GENRES = ['Hip-Hop', 'Trap', 'R&B', 'Pop', 'Drill', 'Afrobeat', 'Lo-Fi', 'Boom Bap', 'Dancehall', 'Electronic'];
 const MOODS = ['Energique', 'Mélancolique', 'Agressif', 'Chill', 'Sombre', 'Joyeux', 'Épique', 'Romantique', 'Mystérieux'];
 
+// File size limits in bytes
+const MAX_COVER_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_PREVIEW_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FULL_SIZE = 100 * 1024 * 1024; // 100MB
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+};
+
 export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }) {
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<{
+        stage: string;
+        progress: number;
+    } | null>(null);
     const [formData, setFormData] = useState<{
         title: string;
         bpm: string;
@@ -46,6 +61,35 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
     });
 
     const handleFileChange = (type: 'cover' | 'preview' | 'full', file: File | null) => {
+        if (!file) {
+            setFormData({ ...formData, [`${type}File`]: null });
+            setPreviews(prev => ({ ...prev, [type]: null }));
+            return;
+        }
+
+        // Validate file size
+        let maxSize = 0;
+        let fileTypeLabel = '';
+
+        if (type === 'cover') {
+            maxSize = MAX_COVER_SIZE;
+            fileTypeLabel = 'image';
+        } else if (type === 'preview') {
+            maxSize = MAX_PREVIEW_SIZE;
+            fileTypeLabel = 'aperçu audio';
+        } else if (type === 'full') {
+            maxSize = MAX_FULL_SIZE;
+            fileTypeLabel = 'fichier complet';
+        }
+
+        if (file.size > maxSize) {
+            toast.error(
+                `Le ${fileTypeLabel} est trop volumineux (${formatFileSize(file.size)}). ` +
+                `Taille maximale: ${formatFileSize(maxSize)}`
+            );
+            return;
+        }
+
         setFormData({ ...formData, [`${type}File`]: file });
 
         if (type === 'cover' && file) {
@@ -73,13 +117,18 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                 preview: formData.previewFile?.name,
                 full: formData.fullFile?.name,
             });
-            
-            const uploadedFiles = await uploadBeatFiles({
-                cover: formData.coverFile,
-                preview: formData.previewFile,
-                full: formData.fullFile,
-            });
-            
+
+            const uploadedFiles = await uploadBeatFiles(
+                {
+                    cover: formData.coverFile,
+                    preview: formData.previewFile,
+                    full: formData.fullFile,
+                },
+                (stage, progress) => {
+                    setUploadProgress({ stage, progress });
+                }
+            );
+
             console.log('Upload successful:', uploadedFiles);
 
             // Create beat in Supabase database
@@ -107,11 +156,23 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                 fullFile: null
             });
             setPreviews({ cover: null, preview: null, full: null });
+            setUploadProgress(null);
             if (onSuccess) onSuccess();
         } catch (error) {
             console.error('Error uploading beat:', error);
+            setUploadProgress(null);
+
             if (error instanceof Error) {
-                toast.error(`Erreur: ${error.message}`);
+                // Provide more specific error messages
+                if (error.message.includes('timeout') || error.message.includes('network')) {
+                    toast.error('Erreur réseau. Vérifiez votre connexion et réessayez.');
+                } else if (error.message.includes('size') || error.message.includes('large')) {
+                    toast.error('Fichier trop volumineux. Réduisez la taille et réessayez.');
+                } else if (error.message.includes('bucket')) {
+                    toast.error('Erreur de configuration du stockage. Contactez l\'administrateur.');
+                } else {
+                    toast.error(`Erreur: ${error.message}`);
+                }
             } else {
                 toast.error("Erreur lors de l'ajout du beat");
             }
@@ -157,8 +218,8 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                             <Label className="text-zinc-300">Genre(s) *</Label>
                             <div className="flex flex-wrap gap-2 p-3 bg-zinc-900 border border-zinc-800 rounded-md min-h-[42px]">
                                 {formData.genres.map((genre) => (
-                                    <Badge 
-                                        key={genre} 
+                                    <Badge
+                                        key={genre}
                                         className="bg-violet-500/20 text-violet-400 border-violet-500/30 hover:bg-violet-500/30 cursor-pointer"
                                         onClick={() => setFormData({ ...formData, genres: formData.genres.filter(g => g !== genre) })}
                                     >
@@ -188,8 +249,8 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                             <Label className="text-zinc-300">Mood(s) *</Label>
                             <div className="flex flex-wrap gap-2 p-3 bg-zinc-900 border border-zinc-800 rounded-md min-h-[42px]">
                                 {formData.moods.map((mood) => (
-                                    <Badge 
-                                        key={mood} 
+                                    <Badge
+                                        key={mood}
                                         className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/30 cursor-pointer"
                                         onClick={() => setFormData({ ...formData, moods: formData.moods.filter(m => m !== mood) })}
                                     >
@@ -320,6 +381,31 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                             </label>
                         </div>
                     </div>
+
+                    {/* Upload Progress Bar */}
+                    {uploadProgress && (
+                        <div className="space-y-2 p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-zinc-400">
+                                    Upload en cours: {
+                                        uploadProgress.stage === 'cover' ? 'Pochette' :
+                                            uploadProgress.stage === 'preview' ? 'Aperçu audio' :
+                                                uploadProgress.stage === 'full' ? 'Fichier complet' :
+                                                    uploadProgress.stage
+                                    }
+                                </span>
+                                <span className="text-violet-400 font-medium">
+                                    {uploadProgress.progress}%
+                                </span>
+                            </div>
+                            <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-violet-500 to-cyan-500 transition-all duration-300 ease-out"
+                                    style={{ width: `${uploadProgress.progress}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <Button
                         type="submit"
