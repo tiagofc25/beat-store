@@ -92,7 +92,7 @@ export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart
 
                     {/* Progress Overlay */}
                     <div
-                        className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-violet-500 to-cyan-500 transition-all duration-100"
+                        className="absolute bottom-0 left-0 h-1.5 bg-gradient-to-r from-pink-500 to-rose-500 transition-all duration-100 shadow-lg shadow-pink-500/50"
                         style={{ width: `${progress}%` }}
                     />
 
@@ -131,17 +131,54 @@ export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart
                 <div className="p-4 space-y-3">
                     <h3 className="font-semibold text-white text-lg truncate">{beat.title}</h3>
 
-                    <div className="flex flex-wrap gap-2">
-                        {parseArray(beat.genre).map((g) => (
-                            <Badge key={g} variant="outline" className="bg-zinc-800/50 text-zinc-300 border-zinc-700">
-                                {g}
-                            </Badge>
-                        ))}
-                        {parseArray(beat.mood).map((m) => (
-                            <Badge key={m} variant="outline" className={cn("border", moodColors[m] || moodColors['Chill'])}>
-                                {m}
-                            </Badge>
-                        ))}
+                    {/* Genres - First Line */}
+                    <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+                        {(() => {
+                            const genres = parseArray(beat.genre);
+                            const maxVisible = 3; // Show max 2 genres
+                            const visibleGenres = genres.slice(0, maxVisible);
+                            const remainingCount = genres.length - maxVisible;
+
+                            return (
+                                <>
+                                    {visibleGenres.map((g) => (
+                                        <Badge key={g} variant="outline" className="bg-zinc-800/50 text-zinc-300 border-zinc-700 text-xs">
+                                            {g}
+                                        </Badge>
+                                    ))}
+                                    {remainingCount > 0 && (
+                                        <Badge variant="outline" className="bg-zinc-800/50 text-zinc-400 border-zinc-700 text-xs">
+                                            +{remainingCount}
+                                        </Badge>
+                                    )}
+                                </>
+                            );
+                        })()}
+                    </div>
+
+                    {/* Moods - Second Line */}
+                    <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+                        {(() => {
+                            const moods = parseArray(beat.mood);
+                            const maxVisible = 2; // Show max 2 moods
+                            const visibleMoods = moods.slice(0, maxVisible);
+                            const remainingCount = moods.length - maxVisible;
+
+                            return (
+                                <>
+                                    {visibleMoods.map((m) => (
+                                        <Badge key={m} variant="outline" className={cn("border text-xs", moodColors[m] || moodColors['Chill'])}>
+                                            {m}
+                                        </Badge>
+                                    ))}
+                                    {remainingCount > 0 && (
+                                        <Badge variant="outline" className="bg-violet-500/20 text-violet-400 border-violet-500/30 text-xs">
+                                            +{remainingCount}
+                                        </Badge>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </div>
 
                     {/* Action Button */}

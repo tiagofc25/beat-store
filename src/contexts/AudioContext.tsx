@@ -63,15 +63,25 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
             setIsPlaying(false);
             setCurrentTime(0);
         };
+        const onPlay = () => {
+            setIsPlaying(true);
+        };
+        const onPause = () => {
+            setIsPlaying(false);
+        };
 
         audio.addEventListener("timeupdate", onTimeUpdate);
         audio.addEventListener("loadedmetadata", onLoadedMetadata);
         audio.addEventListener("ended", onEnded);
+        audio.addEventListener("play", onPlay);
+        audio.addEventListener("pause", onPause);
 
         return () => {
             audio.removeEventListener("timeupdate", onTimeUpdate);
             audio.removeEventListener("loadedmetadata", onLoadedMetadata);
             audio.removeEventListener("ended", onEnded);
+            audio.removeEventListener("play", onPlay);
+            audio.removeEventListener("pause", onPause);
             audio.pause();
             audio.src = "";
         };
@@ -83,19 +93,24 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
         if (currentTrack?.id === track.id) {
             // Same track — just resume
-            audio.play();
-            setIsPlaying(true);
+            audio.play().catch((error) => {
+                console.warn('Play interrupted:', error);
+            });
             return;
         }
 
-        // New track
+        // New track - pause current audio first to prevent interruption errors
+        audio.pause();
         setCurrentTrack(track);
         setCurrentTime(0);
         setDuration(0);
         audio.src = track.audioUrl;
         audio.load();
-        audio.play();
-        setIsPlaying(true);
+
+        // Play will trigger the 'play' event which sets isPlaying to true
+        audio.play().catch((error) => {
+            console.warn('Play interrupted:', error);
+        });
     }, [currentTrack?.id]);
 
     const pause = useCallback(() => {
@@ -108,8 +123,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         if (isPlaying) {
             pause();
         } else {
-            audioRef.current?.play();
-            setIsPlaying(true);
+            audioRef.current?.play().catch((error) => {
+                console.warn('Play interrupted:', error);
+            });
         }
     }, [currentTrack, isPlaying, pause]);
 
