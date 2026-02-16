@@ -18,7 +18,7 @@ const MOODS = ['Energique', 'Mélancolique', 'Agressif', 'Chill', 'Sombre', 'Joy
 
 // File size limits in bytes
 const MAX_COVER_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_PREVIEW_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_PREVIEW_SIZE = 100 * 1024 * 1024; // 100MB (same as full file)
 const MAX_FULL_SIZE = 100 * 1024 * 1024; // 100MB
 
 const formatFileSize = (bytes: number): string => {
