@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { useState } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
+import { AudioProvider } from "@/src/contexts/AudioContext";
+import MiniPlayer from "@/src/components/audio/MiniPlayer";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -21,9 +23,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {children}
+        <AudioProvider>
+          {children}
+          <MiniPlayer />
+        </AudioProvider>
       </AuthProvider>
-      <Toaster 
+      <Toaster
         position="top-right"
         toastOptions={{
           style: {
@@ -36,3 +41,4 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </QueryClientProvider>
   );
 }
+

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Play, Pause, Plus, Check, Music2 } from 'lucide-react';
 import { Badge } from '@/src/components/ui/badge';
 import { Button } from '@/src/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Beat } from '@/lib/supabase/database';
+import { useAudio } from '@/src/contexts/AudioContext';
 
 // Helper function to parse array data that might be a JSON string
 const parseArray = (value: string | string[] | undefined): string[] => {
@@ -30,48 +31,30 @@ interface BeatCardProps {
     isInCart: boolean;
     onAddToCart: (beat: BeatWithId) => void;
     onRemoveFromCart: (beatId: string) => void;
-    onPlay?: (beatId: string) => void;
-    isCurrentlyPlaying?: boolean;
 }
 
-export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart, onPlay, isCurrentlyPlaying }: BeatCardProps) {
-    const audioRef = useRef<HTMLAudioElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [progress, setProgress] = useState(0);
+export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart }: BeatCardProps) {
+    const { currentTrack, isPlaying, currentTime, duration, play, pause } = useAudio();
+
+    const isThisPlaying = currentTrack?.id === beat.id && isPlaying;
+    const progress = currentTrack?.id === beat.id && duration > 0
+        ? (currentTime / duration) * 100
+        : 0;
 
     const handlePlayPause = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        if (!audioRef.current) return;
 
-        if (isPlaying) {
-            audioRef.current.pause();
-            setIsPlaying(false);
+        if (isThisPlaying) {
+            pause();
         } else {
-            onPlay && onPlay(beat.id);
-            audioRef.current.play();
-            setIsPlaying(true);
+            play({
+                id: beat.id,
+                title: beat.title,
+                audioUrl: beat.preview_audio_url,
+                coverUrl: beat.cover_art_url,
+            });
         }
-    };
-
-    // Stop playing if another card starts playing
-    React.useEffect(() => {
-        if (isCurrentlyPlaying === false && isPlaying) {
-            audioRef.current?.pause();
-            setIsPlaying(false);
-        }
-    }, [isCurrentlyPlaying, isPlaying]);
-
-    const handleTimeUpdate = () => {
-        if (audioRef.current) {
-            const prog = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-            setProgress(prog);
-        }
-    };
-
-    const handleEnded = () => {
-        setIsPlaying(false);
-        setProgress(0);
     };
 
     const moodColors: Record<string, string> = {
@@ -93,14 +76,6 @@ export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart
                 "border border-zinc-800 hover:border-zinc-700 transition-all duration-500",
                 "hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1"
             )}>
-                <audio
-                    ref={audioRef}
-                    src={beat.preview_audio_url}
-                    preload="metadata"
-                    onTimeUpdate={handleTimeUpdate}
-                    onEnded={handleEnded}
-                />
-
                 {/* Cover Art */}
                 <div className="relative aspect-square overflow-hidden">
                     {beat.cover_art_url ? (
@@ -125,7 +100,7 @@ export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart
                     <div className={cn(
                         "absolute inset-0 bg-black/50 flex items-center justify-center",
                         "opacity-0 group-hover:opacity-100 transition-opacity duration-300",
-                        isPlaying && "opacity-100"
+                        isThisPlaying && "opacity-100"
                     )}>
                         <button
                             onClick={handlePlayPause}
@@ -133,10 +108,10 @@ export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart
                                 "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300",
                                 "bg-gradient-to-br from-violet-500 to-cyan-500",
                                 "hover:scale-110 hover:shadow-lg hover:shadow-violet-500/50",
-                                isPlaying && "animate-pulse"
+                                isThisPlaying && "animate-pulse"
                             )}
                         >
-                            {isPlaying ? (
+                            {isThisPlaying ? (
                                 <Pause className="w-7 h-7 text-white" fill="white" />
                             ) : (
                                 <Play className="w-7 h-7 text-white ml-1" fill="white" />

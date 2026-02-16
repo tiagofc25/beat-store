@@ -326,10 +326,12 @@ export default function BeatDetail({ beatId }: BeatDetailProps) {
                 </div>
 
                 {/* Waveform Player - Full width below content */}
-                <div className="mt-8">
+                <div className="mt-8 pb-20">
                     <WaveformPlayer
                         src={beat.preview_audio_url}
                         title={beat.title}
+                        beatId={beat.id}
+                        coverUrl={beat.cover_art_url}
                         onDurationLoaded={(d) => setTotalDuration(d)}
                     />
                 </div>

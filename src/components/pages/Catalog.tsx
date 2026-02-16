@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { beatService, beatRequestService, Beat } from '@/lib/supabase/database';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingBag, Music2, Flame, Sparkles, ChevronRight, User } from 'lucide-react';
+import { ShoppingBag, Music2, Flame, Sparkles, ChevronRight, User, Shuffle } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
 import { Skeleton } from '@/src/components/ui/skeleton';
@@ -12,6 +12,7 @@ import BeatCard from '@/src/components/catalogue/BeatCard';
 import CartDrawer from '@/src/components/catalogue/CartDrawer';
 import FilterBar from '@/src/components/catalogue/FilterBar';
 import AnimatedBackground from '@/src/components/ui/AnimatedBackground';
+import { useAudio } from '@/src/contexts/AudioContext';
 
 // Helper function to parse array data that might be a JSON string
 const parseArray = (value: string | string[] | undefined): string[] => {
@@ -34,7 +35,8 @@ export default function Catalog() {
   const [cart, setCart] = useState<BeatWithId[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+  const audio = useAudio();
+
   const [filters, setFilters] = useState({
     genre: 'Tous',
     mood: 'Tous',
@@ -96,9 +98,7 @@ export default function Catalog() {
     localStorage.setItem('beatCart', JSON.stringify(newCart));
   };
 
-  const handlePlay = (beatId: string) => {
-    setCurrentlyPlaying(beatId);
-  };
+
 
   // Filter beats
   const filteredBeats = beats.filter((beat: any) => {
@@ -211,6 +211,26 @@ export default function Catalog() {
           <div className="max-w-4xl mx-auto">
             <FilterBar filters={filters} onFilterChange={setFilters} />
           </div>
+          <div className="mt-6">
+            <Button
+              onClick={() => {
+                if (!filteredBeats || filteredBeats.length === 0) return;
+                const activeBeats = filteredBeats.filter((b: any) => b.is_active !== false);
+                if (activeBeats.length === 0) return;
+                const random = activeBeats[Math.floor(Math.random() * activeBeats.length)];
+                audio.play({
+                  id: random.id,
+                  title: random.title,
+                  audioUrl: random.preview_audio_url,
+                  coverUrl: random.cover_art_url,
+                });
+              }}
+              className="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-6 h-11 text-sm font-medium rounded-full"
+            >
+              <Shuffle className="w-4 h-4 mr-2" />
+              Lancer une prod au hasard 
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -235,8 +255,6 @@ export default function Catalog() {
                         isInCart={cart.some(item => item.id === beat.id)}
                         onAddToCart={addToCart}
                         onRemoveFromCart={removeFromCart}
-                        onPlay={handlePlay}
-                        isCurrentlyPlaying={currentlyPlaying === beat.id}
                       />
                     </div>
                   ))}
@@ -259,8 +277,6 @@ export default function Catalog() {
                         isInCart={cart.some(item => item.id === beat.id)}
                         onAddToCart={addToCart}
                         onRemoveFromCart={removeFromCart}
-                        onPlay={handlePlay}
-                        isCurrentlyPlaying={currentlyPlaying === beat.id}
                       />
                     </div>
                   ))}
@@ -321,8 +337,6 @@ export default function Catalog() {
                 isInCart={cart.some(item => item.id === beat.id)}
                 onAddToCart={addToCart}
                 onRemoveFromCart={removeFromCart}
-                onPlay={handlePlay}
-                isCurrentlyPlaying={currentlyPlaying === beat.id}
               />
             ))}
           </div>

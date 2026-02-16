@@ -3,16 +3,19 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAudio } from "@/src/contexts/AudioContext";
 
 const PREVIEW_LIMIT_SECONDS = 90; // 1 minute 30
 
 interface WaveformPlayerProps {
     src: string;
     title?: string;
+    beatId: string;
+    coverUrl?: string;
     onDurationLoaded?: (duration: number) => void;
 }
 
-export default function WaveformPlayer({ src, title, onDurationLoaded }: WaveformPlayerProps) {
+export default function WaveformPlayer({ src, title, beatId, coverUrl, onDurationLoaded }: WaveformPlayerProps) {
     const waveformRef = useRef<HTMLDivElement>(null);
     const wavesurferRef = useRef<any>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -21,6 +24,18 @@ export default function WaveformPlayer({ src, title, onDurationLoaded }: Wavefor
     const [volume, setVolume] = useState(0.8);
     const [isMuted, setIsMuted] = useState(false);
     const [isReady, setIsReady] = useState(false);
+
+    const audio = useAudio();
+
+    // Pause the global audio when the waveform player is active on this page,
+    // and set the track info so the mini-player can resume on navigation
+    useEffect(() => {
+        // If the global player is playing a different track, pause it
+        if (audio.currentTrack?.id !== beatId && audio.isPlaying) {
+            audio.pause();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (!waveformRef.current) return;
@@ -71,7 +86,13 @@ export default function WaveformPlayer({ src, title, onDurationLoaded }: Wavefor
                 setCurrentTime(ws.getCurrentTime());
             });
 
-            ws.on("play", () => setIsPlaying(true));
+            ws.on("play", () => {
+                setIsPlaying(true);
+                // Pause global audio to avoid double playback
+                if (audio.isPlaying) {
+                    audio.pause();
+                }
+            });
             ws.on("pause", () => setIsPlaying(false));
             ws.on("finish", () => {
                 setIsPlaying(false);
