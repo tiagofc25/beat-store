@@ -3,14 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { beatService, beatRequestService, Beat } from '@/lib/supabase/database';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/src/components/ui/carousel"
 import { ShoppingBag, Music2, Flame, Sparkles, ChevronRight, User, Shuffle } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
 import { Skeleton } from '@/src/components/ui/skeleton';
 import BeatCard from '@/src/components/catalogue/BeatCard';
 import CartDrawer from '@/src/components/catalogue/CartDrawer';
-import FilterBar from '@/src/components/catalogue/FilterBar';
+import FilterBar, { FilterState } from '@/src/components/catalogue/FilterBar';
 import AnimatedBackground from '@/src/components/ui/AnimatedBackground';
 import { useAudio } from '@/src/contexts/AudioContext';
 
@@ -37,10 +44,12 @@ export default function Catalog() {
   const [linksOpen, setLinksOpen] = useState(false);
   const audio = useAudio();
 
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<FilterState>({
     genre: 'Tous',
     mood: 'Tous',
-    search: ''
+    search: '',
+    bpmMin: undefined,
+    bpmMax: undefined
   });
 
   // Load cart from localStorage on mount
@@ -55,34 +64,93 @@ export default function Catalog() {
     }
   }, []);
 
-  const { data: beats = [], isLoading } = useQuery({
-    queryKey: ['beats'],
-    queryFn: () => beatService.filter({ is_active: true }, '-created_date'),
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    status
+  } = useInfiniteQuery({
+    queryKey: ['beats', filters],
+    queryFn: ({ pageParam = 0 }) => beatService.searchBeats({
+      ...filters,
+      page: pageParam as number,
+      limit: 12
+    }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: { data: Beat[], count: number }, allPages: { data: Beat[], count: number }[]) => {
+      if (lastPage.data.length < 12) return undefined;
+      return allPages.length;
+    }
   });
+
+  const allBeats = data?.pages.flatMap((page) => page.data) || [];
+  const isLoading = status === 'pending';
+
+  // Intersection Observer for Infinite Scroll
+  const observerTarget = React.useRef(null);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextPage, fetchNextPage]);
+
+  // Separate query for latest beats (always fetches 10 newest, regardless of main grid filters)
+  const { data: latestBeatsData } = useQuery({
+    queryKey: ['latest-beats'],
+    queryFn: () => beatService.searchBeats({ limit: 10, orderBy: '-created_date' }),
+    enabled: !filters.search && filters.genre === 'Tous' && filters.mood === 'Tous' && filters.bpmMin === undefined && filters.bpmMax === undefined
+  });
+  const latestBeats = latestBeatsData?.data || [];
 
   const { data: beatRequests = [] } = useQuery({
     queryKey: ['beat-requests'],
     queryFn: () => beatRequestService.list('-created_date'),
   });
 
-  // Derive latest beats (newest 6)
-  const latestBeats = beats.slice(0, 6);
-
   // Derive most requested beats by counting appearances in requests
-  const mostRequestedBeats = React.useMemo(() => {
+  const topIds = React.useMemo(() => {
     const countMap: Record<string, number> = {};
     beatRequests.forEach((req) => {
       (req.beat_ids || []).forEach((id) => {
         countMap[id] = (countMap[id] || 0) + 1;
       });
     });
-    return [...beats]
-      .filter((b) => countMap[b.id])
-      .sort((a, b) => (countMap[b.id] || 0) - (countMap[a.id] || 0))
-      .slice(0, 6);
-  }, [beats, beatRequests]);
+    return Object.entries(countMap)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([id]) => id);
+  }, [beatRequests]);
 
-  const hasActiveFilters = filters.genre !== 'Tous' || filters.mood !== 'Tous' || filters.search !== '';
+  const { data: mostRequestedBeatsData } = useQuery({
+    queryKey: ['most-requested-beats', topIds],
+    queryFn: () => beatService.getByIds(topIds),
+    enabled: topIds.length > 0 && !filters.search && filters.genre === 'Tous' && filters.mood === 'Tous' && filters.bpmMin === undefined && filters.bpmMax === undefined
+  });
+
+  // Sort the fetched beats to match popularity order
+  const mostRequestedBeats = React.useMemo(() => {
+    if (!mostRequestedBeatsData) return [];
+    return [...mostRequestedBeatsData].sort((a, b) => {
+      const indexA = topIds.indexOf(a.id);
+      const indexB = topIds.indexOf(b.id);
+      return indexA - indexB; // Keep the order of topIds (most popular first)
+    });
+  }, [mostRequestedBeatsData, topIds]);
+
+  const hasActiveFilters = filters.genre !== 'Tous' || filters.mood !== 'Tous' || filters.search !== '' || filters.bpmMin !== undefined || filters.bpmMax !== undefined;
 
   const addToCart = (beat: BeatWithId) => {
     if (!cart.find((item: BeatWithId) => item.id === beat.id)) {
@@ -98,19 +166,6 @@ export default function Catalog() {
     localStorage.setItem('beatCart', JSON.stringify(newCart));
   };
 
-
-
-  // Filter beats
-  const filteredBeats = beats.filter((beat: any) => {
-    const genreArr = parseArray(beat.genre);
-    const moodArr = parseArray(beat.mood);
-    const matchesGenre = filters.genre === 'Tous' || genreArr.includes(filters.genre);
-    const matchesMood = filters.mood === 'Tous' || moodArr.includes(filters.mood);
-    const matchesSearch = !filters.search ||
-      beat.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-      genreArr.some((g: string) => g.toLowerCase().includes(filters.search.toLowerCase()));
-    return matchesGenre && matchesMood && matchesSearch;
-  });
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] relative">
@@ -203,7 +258,7 @@ export default function Catalog() {
       <section className="relative">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4">
-            Trouve ton <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400">son</span>
+            Trouve ta <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400">prod</span>
           </h2>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto mb-8">
             Parcours notre collection d'instrumentales et sélectionne celles qui t'inspirent
@@ -214,8 +269,8 @@ export default function Catalog() {
           <div className="mt-6">
             <Button
               onClick={() => {
-                if (!filteredBeats || filteredBeats.length === 0) return;
-                const activeBeats = filteredBeats.filter((b: any) => b.is_active !== false);
+                if (!allBeats || allBeats.length === 0) return;
+                const activeBeats = allBeats.filter((b: any) => b.is_active !== false);
                 if (activeBeats.length === 0) return;
                 const random = activeBeats[Math.floor(Math.random() * activeBeats.length)];
                 audio.play({
@@ -228,7 +283,7 @@ export default function Catalog() {
               className="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-6 h-11 text-sm font-medium rounded-full"
             >
               <Shuffle className="w-4 h-4 mr-2" />
-              Lancer une prod au hasard 
+              Lancer une prod au hasard
             </Button>
           </div>
         </div>
@@ -240,49 +295,83 @@ export default function Catalog() {
         {/* Featured Sections (hidden when filters are active) */}
         {!hasActiveFilters && !isLoading && (
           <>
-            {/* Dernières sorties */}
-            {latestBeats.length > 0 && (
-              <section className="mb-12">
-                <div className="flex items-center gap-2 mb-6">
-                  <Sparkles className="w-5 h-5 text-violet-400" />
-                  <h3 className="text-xl font-bold text-white">Dernières sorties</h3>
-                </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  {latestBeats.map((beat: BeatWithId) => (
-                    <div key={beat.id} className="min-w-[260px] max-w-[260px] snap-start flex-shrink-0">
-                      <BeatCard
-                        beat={beat}
-                        isInCart={cart.some(item => item.id === beat.id)}
-                        onAddToCart={addToCart}
-                        onRemoveFromCart={removeFromCart}
-                      />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+              {/* Dernières sorties */}
+              {latestBeats.length > 0 && (
+                <section className="border border-zinc-800 bg-zinc-900/30 rounded-3xl p-6 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="p-2 bg-violet-500/10 rounded-lg">
+                        <Sparkles className="w-5 h-5 text-violet-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white">Dernières sorties</h3>
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
 
-            {/* Beats les plus demandés */}
-            {mostRequestedBeats.length > 0 && (
-              <section className="mb-12">
-                <div className="flex items-center gap-2 mb-6">
-                  <Flame className="w-5 h-5 text-orange-400" />
-                  <h3 className="text-xl font-bold text-white">Les plus demandés</h3>
-                </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  {mostRequestedBeats.map((beat: BeatWithId) => (
-                    <div key={beat.id} className="min-w-[260px] max-w-[260px] snap-start flex-shrink-0">
-                      <BeatCard
-                        beat={beat}
-                        isInCart={cart.some(item => item.id === beat.id)}
-                        onAddToCart={addToCart}
-                        onRemoveFromCart={removeFromCart}
-                      />
+                    <Carousel
+                      opts={{
+                        align: "start",
+                        loop: true,
+                      }}
+                      className="w-full"
+                    >
+                      <CarouselContent className="-ml-4">
+                        {latestBeats.map((beat: BeatWithId) => (
+                          <CarouselItem key={beat.id} className="pl-4 md:basis-1/2 lg:basis-1/2 xl:basis-1/2">
+                            <BeatCard
+                              beat={beat}
+                              isInCart={cart.some(item => item.id === beat.id)}
+                              onAddToCart={addToCart}
+                              onRemoveFromCart={removeFromCart}
+                            />
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious className="hidden group-hover:flex left-0 bg-black/50 border-0 text-white hover:bg-black/70 hover:text-white" />
+                      <CarouselNext className="hidden group-hover:flex right-0 bg-black/50 border-0 text-white hover:bg-black/70 hover:text-white" />
+                    </Carousel>
+                  </div>
+                </section>
+              )}
+
+              {/* Beats les plus demandés */}
+              {mostRequestedBeats.length > 0 && (
+                <section className="border border-zinc-800 bg-zinc-900/30 rounded-3xl p-6 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="p-2 bg-orange-500/10 rounded-lg">
+                        <Flame className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white">Les plus demandés</h3>
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
+
+                    <Carousel
+                      opts={{
+                        align: "start",
+                        loop: true,
+                      }}
+                      className="w-full"
+                    >
+                      <CarouselContent className="-ml-4">
+                        {mostRequestedBeats.map((beat: BeatWithId) => (
+                          <CarouselItem key={beat.id} className="pl-4 md:basis-1/2 lg:basis-1/2 xl:basis-1/2">
+                            <BeatCard
+                              beat={beat}
+                              isInCart={cart.some(item => item.id === beat.id)}
+                              onAddToCart={addToCart}
+                              onRemoveFromCart={removeFromCart}
+                            />
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious className="hidden group-hover:flex left-0 bg-black/50 border-0 text-white hover:bg-black/70 hover:text-white" />
+                      <CarouselNext className="hidden group-hover:flex right-0 bg-black/50 border-0 text-white hover:bg-black/70 hover:text-white" />
+                    </Carousel>
+                  </div>
+                </section>
+              )}
+            </div>
 
             {/* Separator */}
             <div className="mb-8">
@@ -296,10 +385,10 @@ export default function Catalog() {
 
 
 
-        {/* Results count */}
+        {/* Results count (count from flatten beats, can improve to use backend count in pages[0].count if returned) */}
         <div className="mb-6">
           <p className="text-sm text-zinc-500">
-            {filteredBeats.length} beat{filteredBeats.length > 1 ? 's' : ''} trouvé{filteredBeats.length > 1 ? 's' : ''}
+            {allBeats.length} beat{allBeats.length > 1 ? 's' : ''} {hasNextPage ? '+' : ''}
           </p>
         </div>
 
@@ -320,7 +409,7 @@ export default function Catalog() {
               </div>
             ))}
           </div>
-        ) : filteredBeats.length === 0 ? (
+        ) : allBeats.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center mx-auto mb-4">
               <Music2 className="w-10 h-10 text-zinc-700" />
@@ -329,17 +418,30 @@ export default function Catalog() {
             <p className="text-sm text-zinc-600">Essayez de modifier vos filtres</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredBeats.map((beat: BeatWithId) => (
-              <BeatCard
-                key={beat.id}
-                beat={beat}
-                isInCart={cart.some(item => item.id === beat.id)}
-                onAddToCart={addToCart}
-                onRemoveFromCart={removeFromCart}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {allBeats.map((beat: BeatWithId) => (
+                <BeatCard
+                  key={beat.id}
+                  beat={beat}
+                  isInCart={cart.some(item => item.id === beat.id)}
+                  onAddToCart={addToCart}
+                  onRemoveFromCart={removeFromCart}
+                />
+              ))}
+            </div>
+
+            {/* Infinite Scroll Trigger */}
+            <div ref={observerTarget} className="h-20 flex items-center justify-center mt-8">
+              {isFetchingNextPage && (
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce"></div>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </main>
 

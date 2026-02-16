@@ -2,22 +2,25 @@
 
 import React, { useEffect, useRef } from "react";
 
-interface Particle {
+interface PianoNote {
     x: number;
     y: number;
-    size: number;
-    speedX: number;
-    speedY: number;
+    width: number;
+    height: number;
     opacity: number;
+    targetOpacity: number;
+    fadeSpeed: number;
     color: string;
-    pulse: number;
-    pulseSpeed: number;
+    glow: number;
+    glowSpeed: number;
+    lifetime: number;
+    maxLifetime: number;
 }
 
 export default function AnimatedBackground() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationRef = useRef<number>(0);
-    const particlesRef = useRef<Particle[]>([]);
+    const notesRef = useRef<PianoNote[]>([]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -32,6 +35,8 @@ export default function AnimatedBackground() {
             "8, 145, 178",    // cyan-600
             "167, 139, 250",  // violet-400
             "34, 211, 238",   // cyan-400
+            "236, 72, 153",   // pink-500
+            "219, 39, 119",   // pink-600
         ];
 
         const resize = () => {
@@ -41,69 +46,106 @@ export default function AnimatedBackground() {
         resize();
         window.addEventListener("resize", resize);
 
-        // Create particles
-        const particleCount = Math.min(Math.floor(window.innerWidth / 60), 25);
-        particlesRef.current = Array.from({ length: particleCount }, () => ({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 120 + 40,
-            speedX: (Math.random() - 0.5) * 0.3,
-            speedY: (Math.random() - 0.5) * 0.2,
-            opacity: Math.random() * 0.025 + 0.008,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            pulse: Math.random() * Math.PI * 2,
-            pulseSpeed: Math.random() * 0.005 + 0.002,
-        }));
+        // Piano roll lanes (like horizontal piano keys)
+        const laneHeight = 40;
+        const numLanes = Math.ceil(canvas.height / laneHeight);
+
+        // Create a note that appears in place
+        const createNote = () => {
+            const lane = Math.floor(Math.random() * numLanes);
+            const xPos = Math.random() * (canvas.width - 300) + 50;
+            const maxLife = Math.random() * 420 + 480; // 8-15 seconds at 60fps (much longer)
+
+            return {
+                x: xPos,
+                y: lane * laneHeight + 5,
+                width: Math.random() * 250 + 100,
+                height: laneHeight - 10,
+                opacity: 0,
+                targetOpacity: Math.random() * 0.04 + 0.02, // Very subtle (reduced from 0.08 + 0.04)
+                fadeSpeed: 0.005, // Even slower fade
+                color: colors[Math.floor(Math.random() * colors.length)],
+                glow: Math.random() * Math.PI * 2,
+                glowSpeed: Math.random() * 0.01 + 0.005, // Very slow glow
+                lifetime: 0,
+                maxLifetime: maxLife,
+            };
+        };
+
+        // Initialize with some notes
+        notesRef.current = Array.from({ length: 12 }, createNote); // Fewer initial notes
 
         const animate = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            for (const p of particlesRef.current) {
-                // Update position
-                p.x += p.speedX;
-                p.y += p.speedY;
-                p.pulse += p.pulseSpeed;
-
-                // Wrap around edges smoothly
-                if (p.x < -p.size) p.x = canvas.width + p.size;
-                if (p.x > canvas.width + p.size) p.x = -p.size;
-                if (p.y < -p.size) p.y = canvas.height + p.size;
-                if (p.y > canvas.height + p.size) p.y = -p.size;
-
-                // Pulsing opacity
-                const currentOpacity = p.opacity + Math.sin(p.pulse) * 0.005;
-
-                // Draw gradient orb
-                const gradient = ctx.createRadialGradient(
-                    p.x, p.y, 0,
-                    p.x, p.y, p.size
-                );
-                gradient.addColorStop(0, `rgba(${p.color}, ${currentOpacity * 1.5})`);
-                gradient.addColorStop(0.4, `rgba(${p.color}, ${currentOpacity * 0.8})`);
-                gradient.addColorStop(1, `rgba(${p.color}, 0)`);
-
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fillStyle = gradient;
-                ctx.fill();
-            }
-
-            // Draw subtle grid lines
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.012)";
+            // Draw horizontal grid lines (piano roll lanes)
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.02)";
             ctx.lineWidth = 1;
-            const gridSize = 80;
-            for (let x = 0; x < canvas.width; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-            for (let y = 0; y < canvas.height; y += gridSize) {
+            for (let i = 0; i <= numLanes; i++) {
+                const y = i * laneHeight;
                 ctx.beginPath();
                 ctx.moveTo(0, y);
                 ctx.lineTo(canvas.width, y);
                 ctx.stroke();
             }
+
+            // Occasionally add new notes (less frequently for subtlety)
+            if (Math.random() < 0.008 && notesRef.current.length < 18) {
+                notesRef.current.push(createNote());
+            }
+
+            // Update and draw notes
+            notesRef.current = notesRef.current.filter(note => {
+                note.lifetime += 1;
+                note.glow += note.glowSpeed;
+
+                // Fade in phase
+                if (note.lifetime < 30) {
+                    note.opacity = Math.min(note.opacity + note.fadeSpeed, note.targetOpacity);
+                }
+                // Fade out phase (last 30 frames)
+                else if (note.lifetime > note.maxLifetime - 30) {
+                    note.opacity = Math.max(note.opacity - note.fadeSpeed, 0);
+                }
+
+                // Remove notes that have faded out completely
+                if (note.lifetime > note.maxLifetime && note.opacity <= 0) {
+                    return false;
+                }
+
+                // Pulsing glow effect
+                const glowIntensity = Math.sin(note.glow) * 0.1 + 1;
+                const currentOpacity = note.opacity * glowIntensity;
+
+                // Draw note with glow
+                const gradient = ctx.createLinearGradient(
+                    note.x, note.y,
+                    note.x, note.y + note.height
+                );
+                gradient.addColorStop(0, `rgba(${note.color}, ${currentOpacity * 0.6})`);
+                gradient.addColorStop(0.5, `rgba(${note.color}, ${currentOpacity})`);
+                gradient.addColorStop(1, `rgba(${note.color}, ${currentOpacity * 0.6})`);
+
+                // Draw glow/shadow
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = `rgba(${note.color}, ${currentOpacity * 0.9})`;
+
+                // Draw rounded rectangle
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(note.x, note.y, note.width, note.height, 6);
+                ctx.fill();
+
+                // Reset shadow
+                ctx.shadowBlur = 0;
+
+                // Draw subtle border
+                ctx.strokeStyle = `rgba(${note.color}, ${currentOpacity * 1.5})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                return true;
+            });
 
             animationRef.current = requestAnimationFrame(animate);
         };

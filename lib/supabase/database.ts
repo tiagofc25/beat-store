@@ -43,6 +43,18 @@ export const beatService = {
     return data;
   },
 
+  async getByIds(ids: string[]): Promise<Beat[]> {
+    if (ids.length === 0) return [];
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('beats')
+      .select('*')
+      .in('id', ids);
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
   async list(orderBy?: string): Promise<Beat[]> {
     const supabase = createClient();
     let query = supabase.from('beats').select('*');
@@ -77,6 +89,67 @@ export const beatService = {
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data || [];
+  },
+
+  async searchBeats(params: {
+    genre?: string;
+    mood?: string;
+    search?: string;
+    bpmMin?: number;
+    bpmMax?: number;
+    page?: number;
+    limit?: number;
+    orderBy?: string;
+  }): Promise<{ data: Beat[]; count: number }> {
+    const supabase = createClient();
+    let query = supabase.from('beats').select('*', { count: 'exact' });
+
+    // Active
+    query = query.eq('is_active', true);
+
+    // Genre
+    if (params.genre && params.genre !== 'Tous') {
+      // Using .contains for array column
+      query = query.contains('genre', [params.genre]);
+    }
+
+    // Mood
+    if (params.mood && params.mood !== 'Tous') {
+      query = query.contains('mood', [params.mood]);
+    }
+
+    // Search
+    if (params.search) {
+      // Simple searches on title for now (ilike)
+      const searchTerm = `%${params.search}%`;
+      query = query.ilike('title', searchTerm);
+    }
+
+    // BPM Range
+    if (params.bpmMin !== undefined && params.bpmMin > 0) {
+      query = query.gte('bpm', params.bpmMin);
+    }
+    if (params.bpmMax !== undefined && params.bpmMax > 0) {
+      query = query.lte('bpm', params.bpmMax);
+    }
+
+    // Order
+    if (params.orderBy) {
+      const isDesc = params.orderBy.startsWith('-');
+      const column = isDesc ? params.orderBy.slice(1) : params.orderBy;
+      query = query.order(column, { ascending: !isDesc });
+    }
+
+    // Pagination
+    const page = params.page || 0;
+    const limit = params.limit || 12;
+    const from = page * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+    if (error) throw new Error(error.message);
+    return { data: data || [], count: count || 0 };
   },
 
   async create(beat: Omit<Beat, 'id' | 'created_date'>): Promise<Beat> {

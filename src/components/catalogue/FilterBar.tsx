@@ -3,17 +3,22 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
 import { Input } from '@/src/components/ui/input';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Activity } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/src/components/ui/popover';
+import { Label } from '@/src/components/ui/label';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
 
 const GENRES = ['Tous', 'Trap', 'R&B', 'Pop', 'Drill', 'Afrobeat', 'Amapiano', 'Jersey', 'Dancehall', 'Electronic', 'Afro-House', 'House', 'Hood Trap', 'Club', 'SPECIAL'];
 const MOODS = ['Tous', 'Energique', 'Mélancolique', 'Agressif', 'Chill', 'Sombre', 'Joyeux', 'Épique', 'Romantique', 'Mystérieux'];
 
-interface FilterState {
+export interface FilterState {
     genre: string;
     mood: string;
     search: string;
+    bpmMin?: number;
+    bpmMax?: number;
 }
 
 interface FilterBarProps {
@@ -25,11 +30,12 @@ export default function FilterBar({ filters, onFilterChange }: FilterBarProps) {
     const activeFiltersCount = [
         filters.genre !== 'Tous' ? 1 : 0,
         filters.mood !== 'Tous' ? 1 : 0,
-        filters.search ? 1 : 0
+        filters.search ? 1 : 0,
+        (filters.bpmMin || filters.bpmMax) ? 1 : 0
     ].reduce((a, b) => a + b, 0);
 
     const clearFilters = () => {
-        onFilterChange({ genre: 'Tous', mood: 'Tous', search: '' });
+        onFilterChange({ genre: 'Tous', mood: 'Tous', search: '', bpmMin: undefined, bpmMax: undefined });
     };
 
     return (
@@ -79,6 +85,102 @@ export default function FilterBar({ filters, onFilterChange }: FilterBarProps) {
                         ))}
                     </SelectContent>
                 </Select>
+
+                {/* BPM Filter */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className={`w-full sm:w-auto bg-zinc-900/50 border-zinc-800 text-white h-11 justify-between px-3 ${filters.bpmMin || filters.bpmMax ? 'border-violet-500/50 text-violet-400' : ''}`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <Activity className="w-4 h-4" />
+                                {filters.bpmMin || filters.bpmMax ? (
+                                    <span>
+                                        {filters.bpmMin === filters.bpmMax
+                                            ? `${filters.bpmMin} BPM`
+                                            : `${filters.bpmMin || '0'} - ${filters.bpmMax || '∞'}`
+                                        }
+                                    </span>
+                                ) : (
+                                    <span>BPM</span>
+                                )}
+                            </span>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-zinc-900 border-zinc-800 p-4">
+                        <Tabs defaultValue="range" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2 bg-zinc-800 text-zinc-400 mb-4">
+                                <TabsTrigger value="range" className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white">Fourchette</TabsTrigger>
+                                <TabsTrigger value="exact" className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white">Exact</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="range">
+                                <div className="grid gap-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium text-white leading-none">Fourchette de BPM</h4>
+                                        <p className="text-sm text-zinc-400">Filtrer entre deux tempos.</p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="min-bpm" className="text-zinc-300">Min</Label>
+                                            <Input
+                                                id="min-bpm"
+                                                type="number"
+                                                placeholder="0"
+                                                value={filters.bpmMin || ''}
+                                                onChange={(e) => onFilterChange({
+                                                    ...filters,
+                                                    bpmMin: e.target.value ? parseInt(e.target.value) : undefined
+                                                })}
+                                                className="bg-zinc-800 border-zinc-700 text-white h-9"
+                                            />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="max-bpm" className="text-zinc-300">Max</Label>
+                                            <Input
+                                                id="max-bpm"
+                                                type="number"
+                                                placeholder="200"
+                                                value={filters.bpmMax || ''}
+                                                onChange={(e) => onFilterChange({
+                                                    ...filters,
+                                                    bpmMax: e.target.value ? parseInt(e.target.value) : undefined
+                                                })}
+                                                className="bg-zinc-800 border-zinc-700 text-white h-9"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="exact">
+                                <div className="grid gap-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium text-white leading-none">BPM Exact</h4>
+                                        <p className="text-sm text-zinc-400">Filtrer par un tempo précis.</p>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="exact-bpm" className="text-zinc-300">BPM</Label>
+                                        <Input
+                                            id="exact-bpm"
+                                            type="number"
+                                            placeholder="140"
+                                            value={filters.bpmMin === filters.bpmMax ? (filters.bpmMin || '') : ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value ? parseInt(e.target.value) : undefined;
+                                                onFilterChange({
+                                                    ...filters,
+                                                    bpmMin: val,
+                                                    bpmMax: val
+                                                });
+                                            }}
+                                            className="bg-zinc-800 border-zinc-700 text-white h-9"
+                                        />
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+                    </PopoverContent>
+                </Popover>
             </div>
 
             {/* Active Filters */}
@@ -100,6 +202,20 @@ export default function FilterBar({ filters, onFilterChange }: FilterBarProps) {
                         <Badge variant="outline" className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
                             {filters.mood}
                             <button onClick={() => onFilterChange({ ...filters, mood: 'Tous' })} className="ml-1">
+                                <X className="w-3 h-3" />
+                            </button>
+                        </Badge>
+                    )}
+
+                    {(filters.bpmMin || filters.bpmMax) && (
+                        <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                            <Activity className="w-3 h-3 mr-1" />
+                            {filters.bpmMin === filters.bpmMax ? (
+                                <span>{filters.bpmMin} BPM</span>
+                            ) : (
+                                <span>{filters.bpmMin || '0'} - {filters.bpmMax || '∞'} BPM</span>
+                            )}
+                            <button onClick={() => onFilterChange({ ...filters, bpmMin: undefined, bpmMax: undefined })} className="ml-1">
                                 <X className="w-3 h-3" />
                             </button>
                         </Badge>
