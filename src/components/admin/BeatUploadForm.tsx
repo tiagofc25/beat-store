@@ -267,9 +267,17 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                                 </div>
                                 <input
                                     type="file"
-                                    accept="audio/*"
+                                    accept=".mp3,.wav,.ogg,.flac,.aac,.m4a,audio/mpeg,audio/wav,audio/ogg,audio/flac,audio/aac,audio/mp4"
                                     className="hidden"
-                                    onChange={(e) => handleFileChange('preview', e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file && !file.type.startsWith('audio/')) {
+                                            toast.error('Veuillez sélectionner un fichier audio (MP3, WAV, etc.)');
+                                            e.target.value = '';
+                                            return;
+                                        }
+                                        handleFileChange('preview', file || null);
+                                    }}
                                 />
                             </label>
                         </div>
@@ -297,9 +305,17 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                                 </div>
                                 <input
                                     type="file"
-                                    accept="audio/*"
+                                    accept=".mp3,.wav,.ogg,.flac,.aac,.m4a,audio/mpeg,audio/wav,audio/ogg,audio/flac,audio/aac,audio/mp4"
                                     className="hidden"
-                                    onChange={(e) => handleFileChange('full', e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file && !file.type.startsWith('audio/')) {
+                                            toast.error('Veuillez sélectionner un fichier audio (MP3, WAV, etc.)');
+                                            e.target.value = '';
+                                            return;
+                                        }
+                                        handleFileChange('full', file || null);
+                                    }}
                                 />
                             </label>
                         </div>
