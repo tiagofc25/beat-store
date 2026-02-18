@@ -3,6 +3,9 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Use your verified domain email, fallback to test email
+const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -20,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Email à l'admin
     const { error: adminError } = await resend.emails.send({
-      from: 'Spacechico & Winnit <onboarding@resend.dev>',
+      from: `Spacechico & Winnit <${fromEmail}>`,
       to: [adminEmail],
       subject: `🎵 Nouvelle demande de beats - ${firstName} ${lastName}`,
       html: `
@@ -66,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Email de confirmation au client
     const { error: clientError } = await resend.emails.send({
-      from: 'Spacechico & Winnit <onboarding@resend.dev>',
+      from: `Spacechico & Winnit <${fromEmail}>`,
       to: [email],
       subject: `🎵 Confirmation de votre demande - Spacechico & Winnit`,
       html: `
