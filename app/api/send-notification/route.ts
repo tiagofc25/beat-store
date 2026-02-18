@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Use your verified domain email, fallback to test email
-const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const fromEmail = process.env.RESEND_FROM_EMAIL;
 
 export async function POST(request: NextRequest) {
   try {
