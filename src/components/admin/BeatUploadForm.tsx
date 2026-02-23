@@ -12,6 +12,7 @@ import { Upload, Music2, Image, Loader2, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Badge } from '@/src/components/ui/badge';
+import { Switch } from '@/src/components/ui/switch';
 
 const GENRES = ['Trap', 'R&B', 'Pop', 'Drill', 'Afrobeat', 'Amapiano', 'Jersey', 'Dancehall', 'Electronic', 'Afro-House', 'House', 'Hood Trap', 'Club', 'SPECIAL'];
 const MOODS = ['Energique', 'Mélancolique', 'Agressif', 'Chill', 'Sombre', 'Joyeux', 'Épique', 'Romantique', 'Mystérieux'];
@@ -41,6 +42,7 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
         coverFile: File | null;
         previewFile: File | null;
         fullFile: File | null;
+        isActive: boolean;
     }>({
         title: '',
         bpm: '',
@@ -48,7 +50,8 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
         moods: [],
         coverFile: null,
         previewFile: null,
-        fullFile: null
+        fullFile: null,
+        isActive: true
     });
     const [previews, setPreviews] = useState<{
         cover: string | null;
@@ -140,7 +143,7 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                 cover_art_url: uploadedFiles.coverUrl,
                 preview_audio_url: uploadedFiles.previewUrl || '',
                 full_audio_url: uploadedFiles.fullUrl,
-                is_active: true
+                is_active: formData.isActive
             });
 
             toast.success('Beat ajouté avec succès !');
@@ -153,7 +156,8 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                 moods: [],
                 coverFile: null,
                 previewFile: null,
-                fullFile: null
+                fullFile: null,
+                isActive: true
             });
             setPreviews({ cover: null, preview: null, full: null });
             setUploadProgress(null);
@@ -278,7 +282,27 @@ export default function BeatUploadForm({ onSuccess }: { onSuccess?: () => void }
                         </div>
                     </div>
 
+                    <div className="flex items-center gap-2 px-1">
+                        <Switch
+                            id="availability"
+                            checked={formData.isActive}
+                            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                            className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-zinc-700"
+                        />
+                        <Label htmlFor="availability" className="text-zinc-400 cursor-pointer">
+                            Activer la vente
+                        </Label>
+                    </div>
+
                     {/* File Uploads */}
+                    <div className="flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+                        <div className="space-y-0.5">
+                            <Label className="text-zinc-300">Statut de Vente</Label>
+                            <p className="text-xs text-zinc-500">
+                                {formData.isActive ? "Le beat est disponible à l'achat" : "Le beat est marqué comme indisponible (mais reste visible)"}
+                            </p>
+                        </div>
+                    </div>
                     <div className="grid sm:grid-cols-3 gap-4">
                         {/* Cover Art */}
                         <div className="space-y-2">

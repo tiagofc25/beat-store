@@ -9,6 +9,7 @@ import { Label } from '@/src/components/ui/label';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 const GENRES = ['Tous', 'Trap', 'R&B', 'Pop', 'Drill', 'Afrobeat', 'Amapiano', 'Jersey', 'Dancehall', 'Electronic', 'Afro-House', 'House', 'Hood Trap', 'Club', 'SPECIAL'];
 const MOODS = ['Tous', 'Energique', 'Mélancolique', 'Agressif', 'Chill', 'Sombre', 'Joyeux', 'Épique', 'Romantique', 'Mystérieux'];
@@ -19,6 +20,7 @@ export interface FilterState {
     search: string;
     bpmMin?: number;
     bpmMax?: number;
+    availability: 'all' | 'available' | 'unavailable';
 }
 
 interface FilterBarProps {
@@ -31,39 +33,48 @@ export default function FilterBar({ filters, onFilterChange }: FilterBarProps) {
         filters.genre !== 'Tous' ? 1 : 0,
         filters.mood !== 'Tous' ? 1 : 0,
         filters.search ? 1 : 0,
-        (filters.bpmMin || filters.bpmMax) ? 1 : 0
+        (filters.bpmMin || filters.bpmMax) ? 1 : 0,
+        filters.availability !== 'all' ? 1 : 0
     ].reduce((a, b) => a + b, 0);
 
     const clearFilters = () => {
-        onFilterChange({ genre: 'Tous', mood: 'Tous', search: '', bpmMin: undefined, bpmMax: undefined });
+        onFilterChange({
+            genre: 'Tous',
+            mood: 'Tous',
+            search: '',
+            bpmMin: undefined,
+            bpmMax: undefined,
+            availability: 'all'
+        });
     };
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-                {/* Search */}
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-                    <Input
-                        placeholder="Rechercher un beat..."
-                        value={filters.search}
-                        onChange={(e) => onFilterChange({ ...filters, search: e.target.value })}
-                        className="pl-10 bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-500 focus:border-violet-500 h-11"
-                    />
-                </div>
+            {/* Top Row: Search */}
+            <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Input
+                    placeholder="Rechercher un beat..."
+                    value={filters.search}
+                    onChange={(e) => onFilterChange({ ...filters, search: e.target.value })}
+                    className="pl-10 bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-500 focus:border-violet-500 h-12 text-lg rounded-xl"
+                />
+            </div>
 
+            {/* Bottom Row: Filters */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
                 {/* Genre Filter */}
                 <Select
                     value={filters.genre}
                     onValueChange={(value) => onFilterChange({ ...filters, genre: value })}
                 >
-                    <SelectTrigger className="w-full sm:w-44 bg-zinc-900/50 border-zinc-800 text-white h-11">
+                    <SelectTrigger className="w-full sm:w-40 bg-zinc-900/50 border-zinc-800 text-white h-11 rounded-lg">
                         <SelectValue placeholder="Genre" />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-800">
                         {GENRES.map((genre) => (
                             <SelectItem key={genre} value={genre} className="text-white hover:bg-zinc-800 focus:bg-zinc-800">
-                                {genre}
+                                {genre === 'Tous' ? 'Genre (Tous)' : genre}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -74,15 +85,30 @@ export default function FilterBar({ filters, onFilterChange }: FilterBarProps) {
                     value={filters.mood}
                     onValueChange={(value) => onFilterChange({ ...filters, mood: value })}
                 >
-                    <SelectTrigger className="w-full sm:w-44 bg-zinc-900/50 border-zinc-800 text-white h-11">
+                    <SelectTrigger className="w-full sm:w-40 bg-zinc-900/50 border-zinc-800 text-white h-11 rounded-lg">
                         <SelectValue placeholder="Mood" />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-800">
                         {MOODS.map((mood) => (
                             <SelectItem key={mood} value={mood} className="text-white hover:bg-zinc-800 focus:bg-zinc-800">
-                                {mood}
+                                {mood === 'Tous' ? 'Mood (Tous)' : mood}
                             </SelectItem>
                         ))}
+                    </SelectContent>
+                </Select>
+
+                {/* Availability Filter */}
+                <Select
+                    value={filters.availability}
+                    onValueChange={(value: any) => onFilterChange({ ...filters, availability: value })}
+                >
+                    <SelectTrigger className="w-full sm:w-40 bg-zinc-900/50 border-zinc-800 text-white h-11 rounded-lg">
+                        <SelectValue placeholder="Disponibilité" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                        <SelectItem value="all" className="text-white hover:bg-zinc-800 focus:bg-zinc-800">Dispo (Toutes)</SelectItem>
+                        <SelectItem value="available" className="text-white hover:bg-zinc-800 focus:bg-zinc-800">Dispo</SelectItem>
+                        <SelectItem value="unavailable" className="text-white hover:bg-zinc-800 focus:bg-zinc-800">Indispo</SelectItem>
                     </SelectContent>
                 </Select>
 
@@ -185,7 +211,7 @@ export default function FilterBar({ filters, onFilterChange }: FilterBarProps) {
 
             {/* Active Filters */}
             {activeFiltersCount > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center justify-center gap-2 flex-wrap">
                     <SlidersHorizontal className="w-4 h-4 text-zinc-500" />
                     <span className="text-sm text-zinc-500">Filtres actifs:</span>
 
@@ -225,6 +251,18 @@ export default function FilterBar({ filters, onFilterChange }: FilterBarProps) {
                         <Badge variant="outline" className="bg-zinc-500/20 text-zinc-400 border-zinc-500/30">
                             "{filters.search}"
                             <button onClick={() => onFilterChange({ ...filters, search: '' })} className="ml-1">
+                                <X className="w-3 h-3" />
+                            </button>
+                        </Badge>
+                    )}
+
+                    {filters.availability !== 'all' && (
+                        <Badge variant="outline" className={cn(
+                            "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
+                            filters.availability === 'available' && "bg-green-500/20 text-green-400 border-green-500/30"
+                        )}>
+                            {filters.availability === 'available' ? 'Dispo' : 'Indispo'}
+                            <button onClick={() => onFilterChange({ ...filters, availability: 'all' })} className="ml-1">
                                 <X className="w-3 h-3" />
                             </button>
                         </Badge>

@@ -7,8 +7,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Skeleton } from '../ui/skeleton';
-import { 
-  LayoutDashboard, Music2, Inbox, Settings, 
+import {
+  LayoutDashboard, Music2, Inbox, Settings,
   TrendingUp, Users, Clock, Trash2, Eye, EyeOff, LogOut, Pencil, X
 } from 'lucide-react';
 import RequestCard from '@/src/components/admin/RequestCard';
@@ -71,7 +71,8 @@ export default function Admin() {
     title: '',
     genres: [] as string[],
     moods: [] as string[],
-    bpm: ''
+    bpm: '',
+    isActive: true
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -99,7 +100,7 @@ export default function Admin() {
 
   const handleApprove = async (request: RequestWithId, approvedBeatIds: string[], approvedBeatTitles: string[]) => {
     setProcessingId(request.id);
-    
+
     try {
       // Get full audio URLs for the approved beats only
       const requestedBeats = beats.filter(b => approvedBeatIds.includes(b.id));
@@ -131,13 +132,13 @@ export default function Admin() {
       }
 
       // Update request with approved beats info
-      await beatRequestService.update(request.id, { 
+      await beatRequestService.update(request.id, {
         status: newStatus,
         admin_notes: `Beats acceptés: ${approvedBeatTitles.join(', ')}`
       });
 
       queryClient.invalidateQueries({ queryKey: ['requests'] });
-      
+
       toast.success(`${approvedBeatIds.length} beat(s) envoyé(s) par email à ${request.email} !`);
     } catch (error) {
       console.error('Error approving request:', error);
@@ -148,7 +149,7 @@ export default function Admin() {
 
   const handleReject = async (request: RequestWithId) => {
     setProcessingId(request.id);
-    
+
     await beatRequestService.update(request.id, { status: 'rejected' });
 
     queryClient.invalidateQueries({ queryKey: ['requests'] });
@@ -175,20 +176,22 @@ export default function Admin() {
       title: beat.title,
       genres: parseArray(beat.genre),
       moods: parseArray(beat.mood),
-      bpm: beat.bpm.toString()
+      bpm: beat.bpm.toString(),
+      isActive: beat.is_active !== false
     });
   };
 
   const handleSaveEdit = async () => {
     if (!editingBeat) return;
-    
+
     setIsSaving(true);
     try {
       await beatService.update(editingBeat.id, {
         title: editForm.title,
         genre: editForm.genres,
         mood: editForm.moods,
-        bpm: parseInt(editForm.bpm)
+        bpm: parseInt(editForm.bpm),
+        is_active: editForm.isActive
       });
       queryClient.invalidateQueries({ queryKey: ['beats-admin'] });
       toast.success('Beat modifié avec succès');
@@ -394,6 +397,7 @@ export default function Admin() {
                             <Switch
                               checked={beat.is_active}
                               onCheckedChange={() => toggleBeatVisibility(beat)}
+                              className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-zinc-700"
                             />
                           </div>
                           <Button
@@ -456,8 +460,8 @@ export default function Admin() {
                   <Label className="text-zinc-300">Genre(s)</Label>
                   <div className="flex flex-wrap gap-2 p-3 bg-zinc-800 border border-zinc-700 rounded-md min-h-[42px]">
                     {editForm.genres.map((genre) => (
-                      <Badge 
-                        key={genre} 
+                      <Badge
+                        key={genre}
                         className="bg-violet-500/20 text-violet-400 border-violet-500/30 hover:bg-violet-500/30 cursor-pointer"
                         onClick={() => setEditForm({ ...editForm, genres: editForm.genres.filter(g => g !== genre) })}
                       >
@@ -487,8 +491,8 @@ export default function Admin() {
                   <Label className="text-zinc-300">Mood(s)</Label>
                   <div className="flex flex-wrap gap-2 p-3 bg-zinc-800 border border-zinc-700 rounded-md min-h-[42px]">
                     {editForm.moods.map((mood) => (
-                      <Badge 
-                        key={mood} 
+                      <Badge
+                        key={mood}
                         className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/30 cursor-pointer"
                         onClick={() => setEditForm({ ...editForm, moods: editForm.moods.filter(m => m !== mood) })}
                       >
@@ -513,6 +517,17 @@ export default function Admin() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="flex items-center gap-2 pt-2 px-1">
+                  <Switch
+                    id="edit-availability"
+                    checked={editForm.isActive}
+                    onCheckedChange={(checked) => setEditForm({ ...editForm, isActive: checked })}
+                    className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-zinc-700"
+                  />
+                  <Label htmlFor="edit-availability" className="text-zinc-400 cursor-pointer text-sm">
+                    Beat disponible
+                  </Label>
                 </div>
                 <div className="flex gap-3 pt-4">
                   <Button

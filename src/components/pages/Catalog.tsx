@@ -51,7 +51,8 @@ export default function Catalog() {
     mood: 'Tous',
     search: '',
     bpmMin: undefined,
-    bpmMax: undefined
+    bpmMax: undefined,
+    availability: 'all'
   });
 
   // Load cart from localStorage on mount

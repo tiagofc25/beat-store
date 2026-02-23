@@ -96,6 +96,18 @@ export default function BeatCard({ beat, isInCart, onAddToCart, onRemoveFromCart
                         style={{ width: `${progress}%` }}
                     />
 
+                    {/* Status Badge */}
+                    <div className="absolute top-3 left-3 z-10">
+                        <Badge className={cn(
+                            "backdrop-blur-sm border-0",
+                            beat.is_active !== false
+                                ? "bg-green-500/80 text-white"
+                                : "bg-zinc-500/80 text-white"
+                        )}>
+                            {beat.is_active !== false ? "Dispo" : "Indispo"}
+                        </Badge>
+                    </div>
+
                     {/* Play Button Overlay */}
                     <div className={cn(
                         "absolute inset-0 bg-black/50 flex items-center justify-center",

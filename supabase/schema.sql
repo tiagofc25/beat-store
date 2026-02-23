@@ -37,9 +37,9 @@ CREATE TABLE IF NOT EXISTS beat_requests (
 ALTER TABLE beats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE beat_requests ENABLE ROW LEVEL SECURITY;
 
--- Politique pour beats : lecture publique
-CREATE POLICY "Public can view active beats" ON beats
-    FOR SELECT USING (is_active = true);
+-- Politique pour beats : lecture publique (tous les beats sont visibles, même si indisponibles)
+CREATE POLICY "Public can view all beats" ON beats
+    FOR SELECT USING (true);
 
 -- Politique pour beats : admin peut tout faire (utilisateurs authentifiés)
 CREATE POLICY "Authenticated users can manage beats" ON beats

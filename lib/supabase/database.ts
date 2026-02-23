@@ -100,12 +100,18 @@ export const beatService = {
     page?: number;
     limit?: number;
     orderBy?: string;
+    availability?: 'all' | 'available' | 'unavailable';
   }): Promise<{ data: Beat[]; count: number }> {
     const supabase = createClient();
     let query = supabase.from('beats').select('*', { count: 'exact' });
 
-    // Active
-    query = query.eq('is_active', true);
+    // Availability
+    if (params.availability === 'available') {
+      query = query.eq('is_active', true);
+    } else if (params.availability === 'unavailable') {
+      query = query.eq('is_active', false);
+    }
+    // 'all' means no filter on is_active
 
     // Genre
     if (params.genre && params.genre !== 'Tous') {
