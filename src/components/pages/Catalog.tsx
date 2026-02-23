@@ -20,6 +20,7 @@ import CartDrawer from '@/src/components/catalogue/CartDrawer';
 import FilterBar, { FilterState } from '@/src/components/catalogue/FilterBar';
 import AnimatedBackground from '@/src/components/ui/AnimatedBackground';
 import { useAudio } from '@/src/contexts/AudioContext';
+import { cn } from '@/lib/utils';
 
 // Helper function to parse array data that might be a JSON string
 const parseArray = (value: string | string[] | undefined): string[] => {
@@ -42,6 +43,7 @@ export default function Catalog() {
   const [cart, setCart] = useState<BeatWithId[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const audio = useAudio();
 
   const [filters, setFilters] = useState<FilterState>({
@@ -54,6 +56,10 @@ export default function Catalog() {
 
   // Load cart from localStorage on mount
   useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
     const saved = localStorage.getItem('beatCart');
     if (saved) {
       try {
@@ -62,6 +68,7 @@ export default function Catalog() {
         localStorage.removeItem('beatCart');
       }
     }
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const {
@@ -171,8 +178,11 @@ export default function Catalog() {
     <div className="min-h-screen bg-[#0A0A0B] relative">
       <AnimatedBackground />
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-transparent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className={cn(
+        "sticky top-0 z-50 transition-all duration-300",
+        scrolled ? "backdrop-blur-xl py-2" : "bg-transparent py-4"
+      )}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
               <img
@@ -182,7 +192,6 @@ export default function Catalog() {
               />
               <div>
                 <h1 className="text-xl font-bold text-white">Spacechico & Winnit</h1>
-                {/* <p className="text-xs text-zinc-500">Catalogue d'instrumentales</p> */}
               </div>
             </div>
 
@@ -202,33 +211,6 @@ export default function Catalog() {
             </nav>
 
             <div className="flex items-center gap-3 flex-1 justify-end">
-              {/* Mobile Links Dropdown */}
-              <div className="relative sm:hidden">
-                <Button
-                  variant="outline"
-                  onClick={() => setLinksOpen(!linksOpen)}
-                  className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800 text-white text-sm"
-                >
-                  Liens
-                  <svg className={`w-3.5 h-3.5 ml-1 transition-transform ${linksOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </Button>
-                {linksOpen && (
-                  <div className="absolute top-full right-0 mt-2 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-2 min-w-[180px] shadow-2xl z-50">
-                    <a href="https://instagram.com/spacechicowinnitprod" target="_blank" rel="noopener noreferrer" onClick={() => setLinksOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" /></svg>
-                      Instagram
-                    </a>
-                    <a href="https://youtube.com/@SpacechicoWinnit" target="_blank" rel="noopener noreferrer" onClick={() => setLinksOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
-                      YouTube
-                    </a>
-                    <a href="https://beatstars.com/WinnitSpacechico" target="_blank" rel="noopener noreferrer" onClick={() => setLinksOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-1.5 16.5v-9l7.5 4.5-7.5 4.5z" /></svg>
-                      BeatStars
-                    </a>
-                  </div>
-                )}
-              </div>
               <Button
                 variant="outline"
                 onClick={() => setCartOpen(true)}
@@ -241,7 +223,7 @@ export default function Catalog() {
                   </Badge>
                 )}
               </Button>
-              <Link href="/login">
+              <Link href="/login" className="hidden sm:block">
                 <Button
                   variant="outline"
                   className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800 text-white"
@@ -393,56 +375,58 @@ export default function Catalog() {
         </div>
 
         {/* Beat Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-zinc-900/50 rounded-2xl overflow-hidden border border-zinc-800">
-                <Skeleton className="aspect-square bg-zinc-800" />
-                <div className="p-4 space-y-3">
-                  <Skeleton className="h-6 w-3/4 bg-zinc-800" />
-                  <div className="flex gap-2">
-                    <Skeleton className="h-6 w-16 bg-zinc-800 rounded-full" />
-                    <Skeleton className="h-6 w-20 bg-zinc-800 rounded-full" />
-                  </div>
-                  <Skeleton className="h-10 w-full bg-zinc-800 rounded-lg" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : allBeats.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center mx-auto mb-4">
-              <Music2 className="w-10 h-10 text-zinc-700" />
-            </div>
-            <p className="text-zinc-400 mb-2">Aucun beat trouvé</p>
-            <p className="text-sm text-zinc-600">Essayez de modifier vos filtres</p>
-          </div>
-        ) : (
-          <>
+        {
+          isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {allBeats.map((beat: BeatWithId) => (
-                <BeatCard
-                  key={beat.id}
-                  beat={beat}
-                  isInCart={cart.some(item => item.id === beat.id)}
-                  onAddToCart={addToCart}
-                  onRemoveFromCart={removeFromCart}
-                />
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-zinc-900/50 rounded-2xl overflow-hidden border border-zinc-800">
+                  <Skeleton className="aspect-square bg-zinc-800" />
+                  <div className="p-4 space-y-3">
+                    <Skeleton className="h-6 w-3/4 bg-zinc-800" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-6 w-16 bg-zinc-800 rounded-full" />
+                      <Skeleton className="h-6 w-20 bg-zinc-800 rounded-full" />
+                    </div>
+                    <Skeleton className="h-10 w-full bg-zinc-800 rounded-lg" />
+                  </div>
+                </div>
               ))}
             </div>
-
-            {/* Infinite Scroll Trigger */}
-            <div ref={observerTarget} className="h-20 flex items-center justify-center mt-8">
-              {isFetchingNextPage && (
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce"></div>
-                </div>
-              )}
+          ) : allBeats.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center mx-auto mb-4">
+                <Music2 className="w-10 h-10 text-zinc-700" />
+              </div>
+              <p className="text-zinc-400 mb-2">Aucun beat trouvé</p>
+              <p className="text-sm text-zinc-600">Essayez de modifier vos filtres</p>
             </div>
-          </>
-        )}
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {allBeats.map((beat: BeatWithId) => (
+                  <BeatCard
+                    key={beat.id}
+                    beat={beat}
+                    isInCart={cart.some(item => item.id === beat.id)}
+                    onAddToCart={addToCart}
+                    onRemoveFromCart={removeFromCart}
+                  />
+                ))}
+              </div>
+
+              {/* Infinite Scroll Trigger */}
+              <div ref={observerTarget} className="h-20 flex items-center justify-center mt-8">
+                {isFetchingNextPage && (
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce"></div>
+                  </div>
+                )}
+              </div>
+            </>
+          )
+        }
       </main>
 
       {/* Cart Drawer */}
@@ -452,6 +436,6 @@ export default function Catalog() {
         items={cart}
         onRemoveItem={removeFromCart}
       />
-    </div>
+    </div >
   );
 }
